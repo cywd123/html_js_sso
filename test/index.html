@@ -73,7 +73,9 @@
                         <h3>登录验证成功</h3>
                         <div class="success">欢迎您，${username}！</div>
                         <div class="success">已获得脚本使用权限</div>
+                        
                     `;
+                    alert("验证成功，欢迎您 " + username + "！");
                 } else {
                     app.innerHTML = `
                         <h3>权限验证失败</h3>
