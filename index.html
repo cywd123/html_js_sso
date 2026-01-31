@@ -76,11 +76,14 @@
                         
                     `;
                     alert("验证成功，欢迎您 " + username + "！");
+                    // 修改状态栏的url显示为SERVICE_URL
+                    window.history.replaceState({}, '', SERVICE_URL);
                 } else {
                     app.innerHTML = `
                         <h3>权限验证失败</h3>
                         <div class="error">${username}，您暂无权限使用本脚本</div>
                     `;
+                    window.history.replaceState({}, '', SERVICE_URL);
                 }
 
             } catch (err) {
