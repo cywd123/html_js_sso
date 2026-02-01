@@ -72,11 +72,11 @@
           // 2. 无ticket则跳转SSO登录页（自动拼接当前SERVICE_URL作为回调）
           if (!ticket) {
             loading.textContent = "未检测到登录凭证，正在跳转SSO登录页...";
-
-            await sleep(1000); // 等待1秒，提升用户体验
-            // 对SERVICE_URL进行URL编码，避免特殊字符导致的回调异常
-            const loginUrl = `${CONFIG.SSO_LOGIN_URL}?service=${encodeURIComponent(SERVICE_URL)}`;
-            window.location.href = loginUrl;
+            app.innerHTML = `
+                    <h3>未登录</h3>
+                    <div class="error">请先登录以继续使用本脚本</div>
+                    <p>请<a href="${CONFIG.SSO_LOGIN_URL}?service=${encodeURIComponent(SERVICE_URL)}">跳转登录</a></p>
+                `;
             return;
           }
 
