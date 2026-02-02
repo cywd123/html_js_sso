@@ -5,221 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SSO通用登录验证</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-    .container {
-      width: 100%;
-      max-width: 600px;
-      margin: 100px auto;
-      padding: 20px;
-      text-align: center;
-    }
-    .success {
-      color: #28a745;
-      font-size: 18px;
-      margin: 20px 0;
-    }
-    .error {
-      color: #dc3545;
-      font-size: 18px;
-      margin: 20px 0;
-    }
-    .loading {
-      color: #007bff;
-      font-size: 16px;
-    }
-    a {
-      color: #007bff;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
+    * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+    .container {width:100%;max-width:600px;margin:100px auto;padding:20px;text-align:center;}
+    .success {color:#28a745;font-size:18px;margin:20px 0;}
+    .error {color:#dc3545;font-size:18px;margin:20px 0;}
+    .loading {color:#007bff;font-size:16px;}
+    a {color:#007bff;text-decoration:none;}
+    a:hover {text-decoration:underline;}
   </style>
-  <!-- 引入jQuery CDN -->
+  <!-- 极简jQuery CDN -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 </head>
 <body>
-  <div class="container" id="app">
-    <div class="loading" id="loading">正在检测登录状态...</div>
-  </div>
+  <div class="container" id="app"><div class="loading">正在检测登录状态...</div></div>
 
   <script>
-    // 基础配置
-    const CONFIG = {
-      SSO_LOGIN_URL: "https://sso.stu.edu.cn/login",
-      SSO_VALIDATE_URL: "https://sso.stu.edu.cn/serviceValidate",
-      ALLOWED_USERS: ["22ycui"],
-    };
+    // 配置&全局变量（极简整合）
+    const C = {
+      SSO_LOGIN: "https://sso.stu.edu.cn/login",
+      SSO_VALIDATE: "https://sso.stu.edu.cn/serviceValidate",
+      ALLOW: ["22ycui"]
+    },
+    SERVICE_URL = `${location.protocol}//${location.host}${location.pathname}`,
+    LOGIN_URL = `${C.SSO_LOGIN}?service=${encodeURIComponent(SERVICE_URL)}`;
 
-    // 自动检测当前服务地址
-    const SERVICE_URL = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
-
-    // jQuery 入口（替代原生DOMContentLoaded）
-    $(document).ready(async function() {
+    // jQuery 入口+主逻辑（全程链式/极简写法）
+    $(async () => {
       const $app = $("#app");
-      const $loading = $("#loading");
-
       try {
-        // 1. 获取ticket参数（jQuery简化版）
-        const ticket = getUrlParam("ticket");
-
-        // 2. 无ticket跳转登录
-        if (!ticket) {
-          $loading.text("未检测到登录凭证，正在跳转SSO登录页...");
-          $app.html(`
-            <h3>未登录</h3>
-            <div class="error">请先登录以继续使用本脚本</div>
-            <p>请<a href="${CONFIG.SSO_LOGIN_URL}?service=${encodeURIComponent(SERVICE_URL)}">跳转登录</a></p>
-          `);
-          return;
-        }
-
-        // 3. 验证ticket
-        $loading.text("检测到登录凭证，正在验证...");
-        const validateResult = await validateTicket(ticket);
-
-        // 4. 验证失败处理
-        if (!validateResult.success) {
-          $app.html(`
-            <h3>登录验证失败</h3>
-            <div class="error">错误信息：${validateResult.errorMsg || "未知错误"}</div>
-            <p>请<a href="${CONFIG.SSO_LOGIN_URL}?service=${encodeURIComponent(SERVICE_URL)}">重新登录</a></p>
-          `);
-          return;
-        }
-
-        // 5. 权限判断
-        const username = validateResult.username;
-        const hasPermission = CONFIG.ALLOWED_USERS.includes(username);
-
-        // 6. 展示结果
-        if (hasPermission) {
-          $app.html(`
-            <h3>登录验证成功</h3>
-            <div class="success">欢迎您，${username}！</div>
-            <div class="success">已获得脚本使用权限</div>
-          `);
-          alert(`验证成功，欢迎您 ${username}！`);
-        } else {
-          $app.html(`
-            <h3>权限验证失败</h3>
-            <div class="error">${username}，您暂无权限使用本脚本</div>
-          `);
-        }
-        window.history.replaceState({}, "", SERVICE_URL);
-      } catch (err) {
-        // 全局异常处理
-        $app.html(`
-          <h3>操作异常</h3>
-          <div class="error">异常信息：${err.message || "网络错误或服务器异常"}</div>
-          <p>请<a href="${CONFIG.SSO_LOGIN_URL}?service=${encodeURIComponent(SERVICE_URL)}">重新尝试</a></p>
-        `);
-        console.error("SSO验证异常：", err);
-      }
-    });
-
-    /**
-     * 解析URL参数（保留原有逻辑，通用方法）
-     */
-    function getUrlParam(name) {
-      const searchParams = new URLSearchParams(window.location.search);
-      return searchParams.get(name);
-    }
-
-    /**
-     * 验证ticket（改用jQuery.ajax简化请求）
-     */
-    async function validateTicket(ticket) {
-      const params = new URLSearchParams({
-        service: SERVICE_URL,
-        ticket: ticket,
-      });
-      const requestUrl = `${CONFIG.SSO_VALIDATE_URL}?${params.toString()}`;
-
-      try {
-        // jQuery.ajax替代原生fetch，语法更简洁
-        const xmlText = await $.ajax({
-          url: requestUrl,
-          type: "GET",
+        // 1. 获取ticket
+        const ticket = new URLSearchParams(location.search).get("ticket");
+        if (!ticket) return $app.html(`<h3>未登录</h3><div class="error">请先登录以继续</div><p><a href="${LOGIN_URL}">跳转登录</a></p>`);
+        
+        // 2. 验证ticket（极简ajax）
+        $app.find(".loading").text("检测到凭证，正在验证...");
+        const res = await $.ajax({
+          url: C.SSO_VALIDATE,
+          data: { service: SERVICE_URL, ticket },
           headers: { Connection: "close" },
           cache: false,
-          crossDomain: true, // 跨域配置
-          dataType: "text" // 先获取文本，再解析XML
+          crossDomain: true
         });
 
-        // 解析XML结果
-        const result = parseSsoXml(xmlText);
-        return result;
-      } catch (err) {
-        console.error("Ticket验证失败：", err);
-        return {
-          success: false,
-          errorMsg: err.status ? `HTTP请求失败，状态码：${err.status}` : err.message
-        };
+        // 3. 解析XML（精简核心逻辑）
+        const xml = new DOMParser().parseFromString(res, "text/xml"),
+              successNode = xml.evaluate('//*[local-name()="authenticationSuccess"]', xml, null, 9, null).singleNodeValue,
+              failNode = xml.evaluate('//*[local-name()="authenticationFailure"]', xml, null, 9, null).singleNodeValue;
+        
+        // 4. 验证失败处理
+        if (failNode || !successNode) {
+          const msg = failNode?.textContent.trim() || "验证失败，格式异常";
+          return $app.html(`<h3>验证失败</h3><div class="error">${msg}</div><p><a href="${LOGIN_URL}">重新登录</a></p>`);
+        }
+
+        // 5. 权限判断+结果渲染（极简三元）
+        const un = successNode.firstElementChild.textContent.trim();
+        if (!un) throw new Error("无有效用户名");
+        if (C.ALLOW.includes(un)) {
+          $app.html(`<h3>验证成功</h3><div class="success">欢迎您，${un}！</div><div class="success">已获得使用权限</div>`);
+          alert(`验证成功，欢迎 ${un}！`);
+        } else {
+          $app.html(`<h3>权限不足</h3><div class="error">${un}，您暂无使用权限</div>`);
+        }
+        history.replaceState({}, "", SERVICE_URL); // 清除url中的ticket
+      } catch (e) {
+        // 全局异常（极简提示）
+        $app.html(`<h3>操作异常</h3><div class="error">${e.message || "网络/服务器异常"}</div><p><a href="${LOGIN_URL}">重新尝试</a></p>`);
+        console.error("SSO异常：", e);
       }
-    }
-
-    /**
-     * 解析SSO返回的XML（保留原有逻辑）
-     */
-    function parseSsoXml(xmlText) {
-      try {
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-
-        const parseError = xmlDoc.querySelector("parsererror");
-        if (parseError) {
-          throw new Error("XML解析失败，返回内容非有效XML");
-        }
-
-        // 匹配成功节点
-        const successXPath = '//*[local-name()="authenticationSuccess"]';
-        const successNode = xmlDoc.evaluate(
-          successXPath,
-          xmlDoc,
-          null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE,
-          null
-        ).singleNodeValue;
-
-        if (successNode) {
-          const usernameNode = successNode.firstElementChild;
-          const username = usernameNode ? usernameNode.textContent.trim() : "";
-          if (!username) {
-            return { success: false, errorMsg: "SSO返回无有效用户名" };
-          }
-          return { success: true, username: username };
-        }
-
-        // 匹配失败节点
-        const failureXPath = '//*[local-name()="authenticationFailure"]';
-        const failureNode = xmlDoc.evaluate(
-          failureXPath,
-          xmlDoc,
-          null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE,
-          null
-        ).singleNodeValue;
-
-        if (failureNode) {
-          const errorMsg = failureNode.textContent.trim() || "SSO验证失败，原因未知";
-          return { success: false, errorMsg: errorMsg };
-        }
-
-        return { success: false, errorMsg: "SSO返回非预期的XML格式" };
-      } catch (err) {
-        console.error("XML解析异常：", err);
-        return {
-          success: false,
-          errorMsg: `解析验证结果失败：${err.message}`
-        };
-      }
-    }
+    });
   </script>
 </body>
 </html>
